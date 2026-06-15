@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 from contextlib import asynccontextmanager
 from typing import List
@@ -45,6 +45,14 @@ app = FastAPI(
     version="1.0.0",
     description="Production flood risk prediction API for Sri Lanka",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],      # allows any frontend to connect
+    allow_credentials=True,
+    allow_methods=["*"],      # allows GET, POST, etc.
+    allow_headers=["*"],
 )
 
 
