@@ -1,0 +1,10 @@
+version,file,model,dataset,features,local_rmse,local_mae,local_r2,prediction_std,public_score,notes
+V001,sub_v001_mean_baseline.csv,Mean baseline,Full train,None / mean only,,,,,0.40699,Baseline reference
+V003,sub_v003_ridge_alpha50000.csv,Ridge alpha 50000,Regression one-hot ready,One-hot encoded regression features,0.233897,0.179644,0.015511,,0.3963,Best linear model
+V006,sub_v006_catboost_baseline.csv,CatBoost baseline,Model-ready full train,All useful model-ready features except constant column,0.231769,0.176955,0.033351,,0.38368,First strong CatBoost model
+V008,sub_v008_catboost_alpha_pack.csv,CatBoost Alpha Pack,Full cleaned train,35 Alpha Pack,0.231648,0.176737,0.03463,0.042242,0.38308,Alpha features helped
+V010,sub_v010_catboost_alpha_pack_dropmissing.csv,CatBoost Alpha Pack + drop missing,train_dropmissing.csv,35 Alpha Pack,0.231805,0.176606,0.040233,0.044752,0.38176,Best confirmed public score
+V011,sub_v011_catboost_alpha_pack_dropmissing_invalid.csv,CatBoost Alpha Pack + strict clean,train_dropmissing_invalid.csv,35 Alpha Pack,0.231628,0.176713,0.039624,0.041746,0.38309,Invalid row removal hurt public score
+V012,sub_v012_catboost_full_plus_alpha_dropmissing.csv,CatBoost Full + Alpha,train_dropmissing.csv,70 full + alpha features,0.231948,0.176718,0.039049,0.043601,,Not submitted; weaker locally
+V013,sub_v013_catboost_corr_guided_dropmissing.csv,CatBoost correlation-guided,train_dropmissing.csv,49 correlation-guided features,0.231866,0.17672,0.039736,0.043629,,Not submitted; weaker than V010 locally
+V014,sub_v014_catboost_alpha_pack_dropmissing_seed_ensemble.csv,CatBoost seed ensemble,train_dropmissing.csv,35 Alpha Pack,0.231572,0.176419,0.042192,0.044582,,Strongest local model; score was 0.38141
