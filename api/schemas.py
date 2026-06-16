@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from pydantic import BaseModel
 
@@ -39,6 +39,27 @@ class ForecastResponse(BaseModel):
     district: str
     forecast: List[ForecastDay]
     summary: ForecastSummary
+
+
+# ============================================================
+# Briefing schemas (Task 6)
+# ============================================================
+
+class BriefingDayAction(BaseModel):
+    date: str
+    risk_level: str
+    action: str
+
+
+class BriefingResponse(BaseModel):
+    executive_summary: str
+    per_day_actions: List[BriefingDayAction]
+    overall_recommendation: str
+
+
+class ForecastBriefingResponse(ForecastResponse):
+    briefing: Optional[BriefingResponse] = None
+    briefing_error: Optional[str] = None
 
 
 # ============================================================

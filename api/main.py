@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException
 from api.schemas import (
     BatchPredictRequest,
     CitiesResponse,
+    ForecastBriefingResponse,
     ForecastResponse,
     HealthResponse,
     ModelInfoResponse,
@@ -17,6 +18,7 @@ from api.schemas import (
     PredictResponse,
     RootResponse,
 )
+from src.briefing import generate_briefing
 from src.forecast import generate_forecast, list_available_cities
 from src.logger import get_prediction_stats, get_recent_predictions, init_db, log_prediction
 from src.predict import load_model_metadata, load_models, predict_batch
@@ -204,3 +206,24 @@ def forecast(city_name: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/forecast/{city_name}/briefing", response_model=ForecastBriefingResponse)
+def forecast_briefing(city_name: str):
+    """
+    Returns the 10-day forecast plus a Gemini-generated preparedness briefing.
+    If the briefing fails, the forecast still returns with `briefing_error` set.
+    """
+    try:
+        data = generate_forecast(city_name, models=_models)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    try:
+        data["briefing"] = generate_briefing(data)
+    except Exception as e:
+        data["briefing_error"] = str(e)
+
+    return data
