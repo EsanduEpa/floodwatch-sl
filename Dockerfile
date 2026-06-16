@@ -1,5 +1,5 @@
 # Step 1: Use a reliable, optimized Python base image
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Step 2: Establish the working environment inside the container
 WORKDIR /workspace
