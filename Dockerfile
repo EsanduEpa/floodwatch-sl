@@ -1,5 +1,5 @@
 # Step 1: Use a reliable, optimized Python base image
-FROM python:3.11-slim
+FROM python:3.11
 
 # Step 2: Establish the working environment inside the container
 WORKDIR /workspace
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Step 4: Copy the dependencies file first to leverage Docker layer caching
-COPY requirements.txt .
+COPY ./api/requirements.txt .
 
 # Step 5: Install Python libraries
 RUN pip install --no-cache-dir -r requirements.txt
