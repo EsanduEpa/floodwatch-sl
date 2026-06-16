@@ -1,0 +1,17 @@
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--risk-high) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--risk-high) 30%, white);
+  color: var(--risk-high);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
