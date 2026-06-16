@@ -1,5 +1,97 @@
 import { useState } from "react";
+
 import api from "../services/api";
+import RiskBadge from "../components/RiskBadge";
+import ErrorAlert from "../components/ErrorAlert";
+import LoadingSpinner from "../components/LoadingSpinner";
+
+import styles from "./Prediction.module.css";
+
+// ============================================================
+// Form layout — each field has a visible label (shown above the
+// input) so the field name stays readable while typing.
+// ============================================================
+const SECTIONS = [
+  {
+    title: "📍 Location",
+    fields: [
+      { name: "district", label: "District", type: "text", required: true },
+      { name: "place_name", label: "Place Name", type: "text" },
+      { name: "latitude", label: "Latitude", type: "number", step: "0.0001", required: true },
+      { name: "longitude", label: "Longitude", type: "number", step: "0.0001", required: true },
+      { name: "elevation_m", label: "Elevation (m)", type: "number", step: "0.1" },
+    ],
+  },
+  {
+    title: "🌊 Geographic Features",
+    fields: [
+      { name: "distance_to_river_m", label: "Distance to River (m)", type: "number", step: "0.1" },
+      { name: "inundation_area_sqm", label: "Inundation Area (sqm)", type: "number", step: "0.1" },
+      { name: "drainage_index", label: "Drainage Index", type: "number", step: "0.01", min: "0", max: "1" },
+      { name: "landcover", label: "Land Cover", type: "select", options: ["Agriculture", "Forest", "Scrub", "Urban", "Water"] },
+      { name: "soil_type", label: "Soil Type", type: "select", options: ["Sandy", "Silty", "Peaty", "Clay"] },
+      { name: "water_presence_flag", label: "Water Presence", type: "select", options: ["Unlikely", "Likely"] },
+    ],
+  },
+  {
+    title: "🌿 Vegetation & Water Indices",
+    fields: [
+      { name: "ndvi", label: "NDVI (-1 to 1)", type: "number", step: "0.01", min: "-1", max: "1" },
+      { name: "ndwi", label: "NDWI (-1 to 1)", type: "number", step: "0.01", min: "-1", max: "1" },
+    ],
+  },
+  {
+    title: "🌧️ Rainfall",
+    fields: [
+      { name: "rainfall_7d_mm", label: "7-Day Rainfall (mm)", type: "number", step: "0.1", required: true },
+      { name: "monthly_rainfall_mm", label: "Monthly Rainfall (mm)", type: "number", step: "0.1" },
+      { name: "seasonal_index", label: "Seasonal Index (0-1)", type: "number", step: "0.01", min: "0", max: "1" },
+    ],
+  },
+  {
+    title: "🏘️ Population & Infrastructure",
+    fields: [
+      { name: "population_density_per_km2", label: "Population Density (per km²)", type: "number", step: "0.1" },
+      { name: "built_up_percent", label: "Built-up Percent (%)", type: "number", step: "0.1", min: "0", max: "100" },
+      { name: "urban_rural", label: "Urban / Rural", type: "select", options: ["Rural", "Urban"] },
+      { name: "water_supply", label: "Water Supply", type: "select", options: ["Surface water", "Well", "Municipal"] },
+      { name: "electricity", label: "Electricity", type: "select", options: ["Grid", "Mixed"] },
+      { name: "road_quality", label: "Road Quality", type: "select", options: ["Good (paved)", "Fair", "Poor"] },
+      { name: "infrastructure_score", label: "Infrastructure Score (0-100)", type: "number", step: "0.1", min: "0", max: "100" },
+    ],
+  },
+  {
+    title: "🏥 Proximity & Emergency",
+    fields: [
+      { name: "nearest_hospital_km", label: "Nearest Hospital (km)", type: "number", step: "0.1" },
+      { name: "nearest_evac_km", label: "Nearest Evacuation Point (km)", type: "number", step: "0.1" },
+    ],
+  },
+  {
+    title: "⚠️ Flood & Environmental Indices",
+    fields: [
+      { name: "historical_flood_count", label: "Historical Flood Count", type: "number", step: "1", min: "0" },
+      { name: "flood_occurrence_current_event", label: "Flood Occurrence (Current Event)", type: "select", options: ["No", "Yes"] },
+      { name: "terrain_roughness_index", label: "Terrain Roughness Index", type: "number", step: "0.01" },
+      { name: "socioeconomic_status_index", label: "Socioeconomic Status Index (0-1)", type: "number", step: "0.01", min: "0", max: "1" },
+      { name: "extreme_weather_index", label: "Extreme Weather Index (0-1)", type: "number", step: "0.01", min: "0", max: "1" },
+    ],
+  },
+  {
+    title: "🏠 Livability",
+    fields: [
+      { name: "is_good_to_live", label: "Good to Live?", type: "select", options: ["Yes", "No"] },
+      { name: "reason_not_good_to_live", label: "Reason Not Good to Live", type: "select", options: ["Other", "Poor infrastructure", "Flood prone", "Limited services"] },
+    ],
+  },
+  {
+    title: "📅 Metadata",
+    fields: [
+      { name: "generation_date", label: "Generation Date", type: "date" },
+      { name: "is_synthetic", label: "Synthetic Data", type: "checkbox" },
+    ],
+  },
+];
 
 function Prediction() {
   // =========================
@@ -35,7 +127,7 @@ function Prediction() {
     is_good_to_live: "Yes",
     reason_not_good_to_live: "Other",
     is_synthetic: false,
-    generation_date: new Date().toISOString().split('T')[0],
+    generation_date: new Date().toISOString().split("T")[0],
     seasonal_index: "",
     terrain_roughness_index: "",
     socioeconomic_status_index: "",
@@ -99,465 +191,131 @@ function Prediction() {
       console.error(err);
       setError(
         err.response?.data?.detail ||
-        "Prediction failed. Please check backend or inputs."
+          "Prediction failed. Please check backend or inputs."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function for risk level colors
-  const getRiskLevelColor = (level) => {
-    switch (level) {
-      case "Low":
-        return "green";
-      case "Moderate":
-        return "orange";
-      case "High":
-        return "orangered";
-      case "Critical":
-        return "red";
-      default:
-        return "black";
+  // =========================
+  // Field renderer
+  // =========================
+  const renderField = (field) => {
+    const { name, label, type, required, options, step, min, max } = field;
+
+    if (type === "checkbox") {
+      return (
+        <div className={styles.field} key={name}>
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              name={name}
+              checked={formData[name]}
+              onChange={handleInputChange}
+            />
+            {label}
+          </label>
+        </div>
+      );
     }
+
+    return (
+      <div className={styles.field} key={name}>
+        <label className={styles.label} htmlFor={name}>
+          {label}
+          {required && <span className={styles.req}>*</span>}
+        </label>
+
+        {type === "select" ? (
+          <select
+            id={name}
+            className={styles.select}
+            name={name}
+            value={formData[name]}
+            onChange={handleInputChange}
+          >
+            {options.map((opt) => (
+              <option key={opt}>{opt}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={name}
+            className={styles.input}
+            type={type}
+            name={name}
+            step={step}
+            min={min}
+            max={max}
+            value={formData[name]}
+            onChange={handleInputChange}
+          />
+        )}
+      </div>
+    );
   };
 
   // =========================
   // UI
   // =========================
   return (
-    <div style={{ padding: "30px", fontFamily: "Arial, sans-serif", maxWidth: "900px", margin: "0 auto", backgroundColor: "#f5f5f5", borderRadius: "8px" }}>
-      <h2 style={{ textAlign: "center", marginBottom: "10px", color: "#333", fontSize: "28px" }}>FloodWatch SL - Prediction</h2>
-      <p style={{ textAlign: "center", marginBottom: "20px", color: "#666", fontSize: "14px" }}>Enter location and environmental data</p>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>FloodWatch SL — Prediction</h1>
+        <p className={styles.subtitle}>Enter location and environmental data</p>
+      </div>
 
-      {/* Form Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "15px", marginBottom: "20px" }}>
-        
-        {/* Location Section */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>📍 Location</h3>
+      <div className={styles.card}>
+        {SECTIONS.map((section) => (
+          <section className={styles.section} key={section.title}>
+            <h3 className={styles.sectionTitle}>{section.title}</h3>
+            <div className={styles.grid}>
+              {section.fields.map(renderField)}
+            </div>
+          </section>
+        ))}
 
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="text"
-          name="district"
-          placeholder="District *"
-          value={formData.district}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="text"
-          name="place_name"
-          placeholder="Place Name"
-          value={formData.place_name}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="latitude"
-          placeholder="Latitude *"
-          step="0.0001"
-          value={formData.latitude}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="longitude"
-          placeholder="Longitude *"
-          step="0.0001"
-          value={formData.longitude}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="elevation_m"
-          placeholder="Elevation (m)"
-          step="0.1"
-          value={formData.elevation_m}
-          onChange={handleInputChange}
-        />
-
-        {/* Geographic Features */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>🌊 Geographic Features</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="distance_to_river_m"
-          placeholder="Distance to River (m)"
-          step="0.1"
-          value={formData.distance_to_river_m}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="inundation_area_sqm"
-          placeholder="Inundation Area (sqm)"
-          step="0.1"
-          value={formData.inundation_area_sqm}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="drainage_index"
-          placeholder="Drainage Index"
-          step="0.01"
-          min="0"
-          max="1"
-          value={formData.drainage_index}
-          onChange={handleInputChange}
-        />
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="landcover"
-          value={formData.landcover}
-          onChange={handleInputChange}
-        >
-          <option>Agriculture</option>
-          <option>Forest</option>
-          <option>Scrub</option>
-          <option>Urban</option>
-          <option>Water</option>
-        </select>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="soil_type"
-          value={formData.soil_type}
-          onChange={handleInputChange}
-        >
-          <option>Sandy</option>
-          <option>Silty</option>
-          <option>Peaty</option>
-          <option>Clay</option>
-        </select>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="water_presence_flag"
-          value={formData.water_presence_flag}
-          onChange={handleInputChange}
-        >
-          <option>Unlikely</option>
-          <option>Likely</option>
-        </select>
-
-        {/* Vegetation Indices */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>🌿 Vegetation & Water Indices</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="ndvi"
-          placeholder="NDVI (-1 to 1)"
-          step="0.01"
-          min="-1"
-          max="1"
-          value={formData.ndvi}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="ndwi"
-          placeholder="NDWI (-1 to 1)"
-          step="0.01"
-          min="-1"
-          max="1"
-          value={formData.ndwi}
-          onChange={handleInputChange}
-        />
-
-        {/* Rainfall */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>🌧️ Rainfall</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="rainfall_7d_mm"
-          placeholder="7-Day Rainfall (mm) *"
-          step="0.1"
-          value={formData.rainfall_7d_mm}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="monthly_rainfall_mm"
-          placeholder="Monthly Rainfall (mm)"
-          step="0.1"
-          value={formData.monthly_rainfall_mm}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="seasonal_index"
-          placeholder="Seasonal Index (0-1)"
-          step="0.01"
-          min="0"
-          max="1"
-          value={formData.seasonal_index}
-          onChange={handleInputChange}
-        />
-
-        {/* Population & Infrastructure */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>🏘️ Population & Infrastructure</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="population_density_per_km2"
-          placeholder="Population Density (per km²)"
-          step="0.1"
-          value={formData.population_density_per_km2}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="built_up_percent"
-          placeholder="Built-up Percent (%)"
-          step="0.1"
-          min="0"
-          max="100"
-          value={formData.built_up_percent}
-          onChange={handleInputChange}
-        />
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="urban_rural"
-          value={formData.urban_rural}
-          onChange={handleInputChange}
-        >
-          <option>Rural</option>
-          <option>Urban</option>
-        </select>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="water_supply"
-          value={formData.water_supply}
-          onChange={handleInputChange}
-        >
-          <option>Surface water</option>
-          <option>Well</option>
-          <option>Municipal</option>
-        </select>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="electricity"
-          value={formData.electricity}
-          onChange={handleInputChange}
-        >
-          <option>Grid</option>
-          <option>Mixed</option>
-        </select>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="road_quality"
-          value={formData.road_quality}
-          onChange={handleInputChange}
-        >
-          <option>Good (paved)</option>
-          <option>Fair</option>
-          <option>Poor</option>
-        </select>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="infrastructure_score"
-          placeholder="Infrastructure Score (0-100)"
-          step="0.1"
-          min="0"
-          max="100"
-          value={formData.infrastructure_score}
-          onChange={handleInputChange}
-        />
-
-        {/* Proximity Indices */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>🏥 Proximity & Emergency</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="nearest_hospital_km"
-          placeholder="Nearest Hospital (km)"
-          step="0.1"
-          value={formData.nearest_hospital_km}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="nearest_evac_km"
-          placeholder="Nearest Evacuation Point (km)"
-          step="0.1"
-          value={formData.nearest_evac_km}
-          onChange={handleInputChange}
-        />
-
-        {/* Flood & Environmental Indices */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>⚠️ Flood & Environmental Indices</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="historical_flood_count"
-          placeholder="Historical Flood Count"
-          step="1"
-          min="0"
-          value={formData.historical_flood_count}
-          onChange={handleInputChange}
-        />
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="flood_occurrence_current_event"
-          value={formData.flood_occurrence_current_event}
-          onChange={handleInputChange}
-        >
-          <option>No</option>
-          <option>Yes</option>
-        </select>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="terrain_roughness_index"
-          placeholder="Terrain Roughness Index"
-          step="0.01"
-          value={formData.terrain_roughness_index}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="socioeconomic_status_index"
-          placeholder="Socioeconomic Status Index (0-1)"
-          step="0.01"
-          min="0"
-          max="1"
-          value={formData.socioeconomic_status_index}
-          onChange={handleInputChange}
-        />
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="number"
-          name="extreme_weather_index"
-          placeholder="Extreme Weather Index (0-1)"
-          step="0.01"
-          min="0"
-          max="1"
-          value={formData.extreme_weather_index}
-          onChange={handleInputChange}
-        />
-
-        {/* Livability */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>🏠 Livability</h3>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="is_good_to_live"
-          value={formData.is_good_to_live}
-          onChange={handleInputChange}
-        >
-          <option>Yes</option>
-          <option>No</option>
-        </select>
-
-        <select
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          name="reason_not_good_to_live"
-          value={formData.reason_not_good_to_live}
-          onChange={handleInputChange}
-        >
-          <option>Other</option>
-          <option>Poor infrastructure</option>
-          <option>Flood prone</option>
-          <option>Limited services</option>
-        </select>
-
-        {/* Metadata */}
-        <h3 style={{ gridColumn: "1 / -1", marginTop: "20px", marginBottom: "10px", fontSize: "16px", fontWeight: "bold", color: "#0056b3", borderBottom: "2px solid #0056b3", paddingBottom: "5px" }}>📅 Metadata</h3>
-
-        <input
-          style={{ padding: "12px", fontSize: "14px", border: "1px solid #ddd", borderRadius: "4px", fontFamily: "Arial, sans-serif" }}
-          type="date"
-          name="generation_date"
-          value={formData.generation_date}
-          onChange={handleInputChange}
-        />
-
-        <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px", fontSize: "14px", cursor: "pointer" }}>
-          <input
-            type="checkbox"
-            name="is_synthetic"
-            checked={formData.is_synthetic}
-            onChange={handleInputChange}
-          />
-          Synthetic Data
-        </label>
-
-        {/* Submit Button */}
         <button
-          style={{ gridColumn: "1 / -1", padding: "12px", fontSize: "16px", fontWeight: "bold", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", marginTop: "10px" }}
+          className={styles.button}
           onClick={handlePredict}
           disabled={loading}
         >
-          {loading ? "Predicting..." : "Get Flood Risk Prediction"}
+          {loading ? (
+            <LoadingSpinner label="Predicting..." />
+          ) : (
+            "Get Flood Risk Prediction"
+          )}
         </button>
       </div>
 
       {/* Error */}
       {error && (
-        <div style={{ padding: "15px", backgroundColor: "#f8d7da", color: "#721c24", border: "1px solid #f5c6cb", borderRadius: "4px", marginTop: "15px" }}>
-          {error}
+        <div className={styles.feedback}>
+          <ErrorAlert message={error} />
         </div>
       )}
 
       {/* Result */}
       {prediction && (
-        <div style={{ marginTop: "20px", padding: "20px", backgroundColor: "#d4edda", border: "1px solid #c3e6cb", borderRadius: "4px", color: "#155724" }}>
-          <h2>📊 Prediction Result</h2>
-          <p>
-            <b>Flood Risk Score:</b> <span style={{ fontSize: "20px", fontWeight: "bold", color: "#0056b3" }}>{prediction.flood_risk_score.toFixed(4)}</span>
-          </p>
-          <p>
-            <b>Risk Level:</b>{" "}
-            <span style={{ fontSize: "18px", fontWeight: "bold", color: getRiskLevelColor(prediction.risk_level) }}>
-              {prediction.risk_level}
+        <div className={styles.result}>
+          <h2 className={styles.resultTitle}>Prediction Result</h2>
+
+          <div className={styles.scoreRow}>
+            <span className={styles.scoreValue}>
+              {prediction.flood_risk_score.toFixed(4)}
             </span>
-          </p>
-          <p>
-            <b>Model Version:</b> {prediction.model_version}
-          </p>
-          <p>
-            <b>Record ID:</b> {prediction.record_id}
-          </p>
+            <RiskBadge riskLevel={prediction.risk_level} />
+          </div>
+
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Model Version</span>
+            <span className={styles.metaValue}>{prediction.model_version}</span>
+          </div>
+          <div className={styles.metaRow}>
+            <span className={styles.metaLabel}>Record ID</span>
+            <span className={styles.metaValue}>{prediction.record_id}</span>
+          </div>
         </div>
       )}
     </div>
