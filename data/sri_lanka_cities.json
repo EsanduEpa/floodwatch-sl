@@ -1,0 +1,31 @@
+{
+  "cities": [
+    { "name": "Colombo",       "district": "Colombo",       "lat":  6.9271, "lng":  79.8612 },
+    { "name": "Dehiwala",      "district": "Colombo",       "lat":  6.8409, "lng":  79.8650 },
+    { "name": "Gampaha",       "district": "Gampaha",       "lat":  7.0917, "lng":  79.9997 },
+    { "name": "Negombo",       "district": "Gampaha",       "lat":  7.2083, "lng":  79.8358 },
+    { "name": "Kalutara",      "district": "Kalutara",      "lat":  6.5854, "lng":  79.9607 },
+    { "name": "Kandy",         "district": "Kandy",         "lat":  7.2906, "lng":  80.6337 },
+    { "name": "Matale",        "district": "Matale",        "lat":  7.4675, "lng":  80.6234 },
+    { "name": "Nuwara Eliya",  "district": "Nuwara Eliya",  "lat":  6.9497, "lng":  80.7891 },
+    { "name": "Galle",         "district": "Galle",         "lat":  6.0535, "lng":  80.2210 },
+    { "name": "Matara",        "district": "Matara",        "lat":  5.9485, "lng":  80.5353 },
+    { "name": "Hambantota",    "district": "Hambantota",    "lat":  6.1241, "lng":  81.1185 },
+    { "name": "Jaffna",        "district": "Jaffna",        "lat":  9.6615, "lng":  80.0255 },
+    { "name": "Kilinochchi",   "district": "Kilinochchi",   "lat":  9.3803, "lng":  80.4055 },
+    { "name": "Mannar",        "district": "Mannar",        "lat":  8.9810, "lng":  79.9044 },
+    { "name": "Vavuniya",      "district": "Vavuniya",      "lat":  8.7514, "lng":  80.4971 },
+    { "name": "Mullaitivu",    "district": "Mullaitivu",    "lat":  9.2671, "lng":  80.8129 },
+    { "name": "Batticaloa",    "district": "Batticaloa",    "lat":  7.7170, "lng":  81.7000 },
+    { "name": "Ampara",        "district": "Ampara",        "lat":  7.2974, "lng":  81.6747 },
+    { "name": "Trincomalee",   "district": "Trincomalee",   "lat":  8.5874, "lng":  81.2152 },
+    { "name": "Kurunegala",    "district": "Kurunegala",    "lat":  7.4863, "lng":  80.3647 },
+    { "name": "Puttalam",      "district": "Puttalam",      "lat":  8.0408, "lng":  79.8394 },
+    { "name": "Anuradhapura",  "district": "Anuradhapura",  "lat":  8.3114, "lng":  80.4037 },
+    { "name": "Polonnaruwa",   "district": "Polonnaruwa",   "lat":  7.9403, "lng":  81.0188 },
+    { "name": "Badulla",       "district": "Badulla",       "lat":  6.9934, "lng":  81.0550 },
+    { "name": "Monaragala",    "district": "Monaragala",    "lat":  6.8728, "lng":  81.3507 },
+    { "name": "Ratnapura",     "district": "Ratnapura",     "lat":  6.6828, "lng":  80.3992 },
+    { "name": "Kegalle",       "district": "Kegalle",       "lat":  7.2513, "lng":  80.3464 }
+  ]
+}
