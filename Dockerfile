@@ -4,7 +4,7 @@ FROM python:3.11
 # Step 2: Establish the working environment inside the container
 WORKDIR /workspace
 
-# Step 3: Set the Python path early so script imports can find the src directory
+# Step 3: Explicitly lock the Python module path to our absolute workspace root
 ENV PYTHONPATH=/workspace
 
 # Step 4: Install underlying OS dependencies required for CatBoost C-bindings 
@@ -18,18 +18,19 @@ COPY ./api/requirements.txt .
 # Step 6: Install Python libraries
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Step 7: Copy all the modular components of your system into the container
+# Step 7: Copy all modular components into the container
 COPY api/ ./api/
 COPY src/ ./src/
 COPY models/ ./models/
 COPY scripts/ ./scripts/
+COPY data/ ./data/
 
-# Step 8: Create the data directory so SQLite has a valid path to write predictions.db
+# Step 8: Create the data directory explicitly so SQLite has a valid path to write predictions.db
 RUN mkdir -p data
 
-# Step 9: Execute the one-time artifact script to generate the .joblib transformers
-# We add a fallback print statement to show the exact error trace if it fails
-RUN python scripts/fit_transformers.py || (echo "ERROR: Transformation script failed. Check if train.csv data is missing in your Git repository!" && exit 1)
+# Step 9: Run the transformer script by forcing Python to execute it from the absolute /workspace root
+# This explicitly aligns the relative path definitions inside the script with Docker's filesystem
+RUN cd /workspace && python scripts/fit_transformers.py
 
 # Step 10: Expose Render's standard web service port
 EXPOSE 10000
