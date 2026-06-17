@@ -158,10 +158,82 @@
   color: var(--text);
 }
 
-.placeholder {
-  padding: 32px;
-  text-align: center;
-  color: var(--text-muted);
-  border: 1px dashed var(--border);
+/* Result sections */
+.card {
+  padding: 24px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.cardHeader,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+
+.cardHeader svg,
+.sectionHeader svg {
+  color: var(--blue);
+}
+
+.execSummary {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .dayGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dayGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Strategic Recommendation — navy card */
+.recommendation {
+  padding: 24px;
+  background: var(--navy);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.recHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.recHeader svg {
+  color: #fff;
+}
+
+.recBody {
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.95);
 }

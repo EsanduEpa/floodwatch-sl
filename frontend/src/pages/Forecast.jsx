@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 
+import { BookOpen, TrendingUp, ClipboardCheck, Lightbulb } from "lucide-react";
+
 import api from "../services/api";
 import ErrorAlert from "../components/ErrorAlert";
 import LoadingSpinner from "../components/LoadingSpinner";
+import SummaryStats from "../components/SummaryStats";
+import ForecastChart from "../components/ForecastChart";
+import DayCard from "../components/DayCard";
 
 import styles from "./Forecast.module.css";
 
@@ -147,12 +152,66 @@ export default function Forecast() {
           </div>
         )}
 
-        {/* Display sections are added in Phase C. */}
-        {!error && !loading && data && (
-          <div className={styles.placeholder}>
-            Forecast loaded for {data.city}, {data.district}. Display sections coming next.
-          </div>
-        )}
+        {!error && !loading && data && (() => {
+          // Match each day's briefing action by date; missing → null (renders "—").
+          const actionByDate = {};
+          (data.briefing?.per_day_actions || []).forEach((a) => {
+            actionByDate[a.date] = a.action;
+          });
+
+          return (
+            <>
+              {/* Section 1 — Executive Summary (only when briefing available) */}
+              {data.briefing && (
+                <section className={styles.card}>
+                  <h2 className={styles.cardHeader}>
+                    <BookOpen size={18} strokeWidth={2.2} />
+                    Executive Summary
+                  </h2>
+                  <p className={styles.execSummary}>{data.briefing.executive_summary}</p>
+                  <SummaryStats summary={data.summary} forecast={data.forecast} />
+                </section>
+              )}
+
+              {/* Section 2 — 10-Day Risk Timeline */}
+              <section className={styles.card}>
+                <h2 className={styles.cardHeader}>
+                  <TrendingUp size={18} strokeWidth={2.2} />
+                  10-Day Risk Timeline
+                </h2>
+                <ForecastChart forecast={data.forecast} />
+              </section>
+
+              {/* Section 3 — Day-by-Day Action Plan */}
+              <section className={styles.section}>
+                <h2 className={styles.sectionHeader}>
+                  <ClipboardCheck size={18} strokeWidth={2.2} />
+                  Day-by-Day Action Plan
+                </h2>
+                <div className={styles.dayGrid}>
+                  {data.forecast.map((day) => (
+                    <DayCard
+                      key={day.date}
+                      day={day}
+                      action={actionByDate[day.date] ?? null}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              {/* Section 4 — Strategic Recommendation (only when briefing available) */}
+              {data.briefing && (
+                <section className={styles.recommendation}>
+                  <h2 className={styles.recHeader}>
+                    <Lightbulb size={18} strokeWidth={2.2} />
+                    Strategic Recommendation
+                  </h2>
+                  <p className={styles.recBody}>{data.briefing.overall_recommendation}</p>
+                </section>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
