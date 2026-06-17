@@ -177,7 +177,7 @@ export default function Forecast() {
                 </section>
               )}
 
-              {/* Summary stat chips — always render (independent of briefing) */}
+              {/* Summary stat chips — always render  */}
               <section className={styles.card}>
                 <SummaryStats summary={data.summary} forecast={data.forecast} />
               </section>
