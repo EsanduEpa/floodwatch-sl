@@ -1,6 +1,6 @@
 import styles from "./StatCard.module.css";
 
-export default function StatCard({ value, label, icon: Icon }) {
+export default function StatCard({ value, label, icon: Icon, valueColor }) {
   return (
     <div className={styles.card}>
       {Icon && (
@@ -9,7 +9,12 @@ export default function StatCard({ value, label, icon: Icon }) {
         </span>
       )}
       <div className={styles.body}>
-        <span className={styles.value}>{value}</span>
+        <span
+          className={styles.value}
+          style={valueColor ? { color: valueColor } : undefined}
+        >
+          {value}
+        </span>
         <span className={styles.label}>{label}</span>
       </div>
     </div>

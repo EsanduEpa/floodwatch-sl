@@ -75,10 +75,138 @@
   gap: 24px;
 }
 
-.placeholder {
-  padding: 32px;
-  text-align: center;
-  color: var(--text-muted);
-  border: 1px dashed var(--border);
+.refreshWarning {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--risk-moderate);
+  background: color-mix(in srgb, var(--risk-moderate) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--risk-moderate) 28%, white);
+  border-radius: 6px;
+}
+
+/* Section 1 — stat strip */
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 960px) {
+  .statStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .statStrip {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cards */
+.card {
+  padding: 24px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+
+.cardHeader svg {
+  color: var(--blue);
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cardHeaderRow .cardHeader {
+  margin-bottom: 0;
+}
+
+.cardSub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: -10px;
+  margin-bottom: 16px;
+}
+
+.showing {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Section 2 — charts row */
+.chartsRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Section 5 — Model Information (navy) */
+.modelCard {
+  padding: 24px;
+  background: var(--navy);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.modelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.modelHeader svg {
+  color: #fff;
+}
+
+.modelGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 24px;
+}
+
+.mLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mValue {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--risk-low);
+  display: inline-block;
 }

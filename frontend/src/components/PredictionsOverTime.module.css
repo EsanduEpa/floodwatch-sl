@@ -1,0 +1,27 @@
+.empty {
+  padding: 80px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+}
+
+.tipDate {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.tipCount {
+  color: var(--text-muted);
+}
