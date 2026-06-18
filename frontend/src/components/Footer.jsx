@@ -17,8 +17,11 @@ export default function Footer() {
         </nav>
 
         <div className={styles.contact}>
-          <a href="mailto:contact@floodwatch-sl.local">contact@floodwatch-sl.local</a>
-          <a href="https://github.com/" target="_blank" rel="noreferrer">
+          <a
+            href="https://github.com/UmeshMadhusankha/floodwatch-sl"
+            target="_blank"
+            rel="noreferrer"
+          >
             GitHub Repository
           </a>
         </div>

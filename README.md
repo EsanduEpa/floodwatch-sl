@@ -1,163 +1,179 @@
 # FloodWatch SL
 
-FloodWatch SL is an end-to-end ML system for predicting flood risk scores for Sri Lankan
-locations. It serves the Round 1 champion model (**V014 CatBoost Alpha Pack seed ensemble**)
-through a FastAPI backend and a React (Vite) frontend, with prediction logging and monitoring.
+FloodWatch SL is an end-to-end MLOps platform that predicts flood-risk scores for Sri Lankan
+locations and turns them into operational, decision-ready guidance. It serves the Round 1 champion
+model (**V014 CatBoost Alpha Pack seed ensemble**) through a FastAPI backend and a React frontend,
+adding a 10-day weather-driven forecast, an AI-generated preparedness briefing, an interactive risk
+map, and a live monitoring dashboard.
+
+Built for the **IEEE ML Opsidian: Genesis 2026** competition.
 
 ---
 
-## Features
+## Team
 
-- **CatBoost seed-ensemble prediction** — 25 models (5 seeds × 5 folds) averaged into one score.
-- **Raw-record scoring** — the API accepts plain location/environmental inputs and builds every
-  feature the model needs internally (no pre-processed CSV required).
-- **Single and batch prediction** — `POST /predict` and `POST /predict/batch`.
-- **FastAPI service** — typed Pydantic schemas, CORS enabled, models loaded once at startup.
-- **Prediction logging** — every prediction is stored in a SQLite database (`data/predictions.db`).
-- **Monitoring endpoints** — `GET /history` and `GET /stats` expose recent predictions and
-  aggregate statistics (totals, average score, risk-level breakdown).
-- **React frontend** — a prediction form wired to the API, plus scaffolded Map, Batch, and
-  Monitoring pages.
+- **Umesh Yapa**
+- **Esandu Epa**
+- **Shalitha Rathnayake**
+- **Lasal Jayasinghe**
+
+IEEE Student Branch, University of Colombo School of Computing (UCSC).
+
+---
+
+## Live deployment
+
+| Service  | URL |
+|----------|-----|
+| API (Render) | https://floodwatch-sl.onrender.com |
+| Frontend (Vercel) | `https://<your-vercel-app>.vercel.app` _(replace with the live Vercel URL)_ |
+
+> Note: the API runs on Render's free tier and **spins down when idle** — the first request after a
+> period of inactivity can take 30–50 seconds to wake (cold start). Subsequent requests are fast.
+
+Quick health check: `curl https://floodwatch-sl.onrender.com/health`
+
+---
+
+## System overview
+
+**Stack:** Python · FastAPI · CatBoost · scikit-learn · pandas · React 19 · Vite · Leaflet · recharts
+· MLflow · Docker · Render · Vercel.
+
+**Architecture (request flow):**
+
+```
+React frontend (Vercel)
+        │  HTTPS (axios)
+        ▼
+FastAPI service (Render, Docker)
+  ├─ /predict, /predict/batch ── feature_engineering → data_validation → predict (25-model ensemble) → SQLite log
+  ├─ /forecast/{city}[/all]    ── Open-Meteo rainfall → record composition → ensemble → 1-hour cache
+  ├─ /forecast/{city}/briefing ── forecast + Google Gemini natural-language briefing (graceful fallback)
+  ├─ /stats, /history          ── SQLite prediction log (powers the monitoring dashboard)
+  └─ /model-info               ── champion model metadata
+```
+
+**The model (V014):** CatBoost regressor **seed ensemble** — 25 models (5 seeds × 5 folds) averaged,
+trained on the 35-feature "Alpha Pack" with target-binned StratifiedKFold. Feature engineering
+(`src/feature_engineering.py`) builds engineered ratio features plus log1p / quantile-map /
+Yeo-Johnson transforms; the fitted transformers are persisted as `.joblib` so inference exactly
+mirrors training.
+
+**Features:**
+- **Predict** — Expert (all 33 inputs) and Quick (district-default auto-fill) modes.
+- **Forecast** — 10-day per-city risk timeline from live Open-Meteo rainfall, with a Gemini briefing.
+- **Map** — all 27 cities on an interactive Leaflet map with a 10-day time slider and play animation.
+- **Monitoring** — live telemetry (auto-refresh) over prediction stats, history, risk distribution,
+  and MLflow experiment tracking.
 
 ---
 
 ## Project structure
 
 ```
-floodwatch-sl/
-├── api/                     FastAPI app
-│   ├── main.py              endpoints + CORS + lifespan model loading
-│   └── schemas.py           Pydantic request/response models
-├── src/                     prediction library
-│   ├── config.py            paths, columns, risk thresholds
-│   ├── feature_engineering.py   Alpha Pack + log1p/qmap/yeojohnson features
-│   ├── data_validation.py   input validation
-│   ├── predict.py           model loading + ensemble inference
-│   └── logger.py            SQLite prediction logging + stats
-├── scripts/
-│   ├── fit_transformers.py  one-time fit of the 3 fitted transformers
-│   └── test_predict_pipeline.py   end-to-end smoke test
-├── models/champion_v014_seed_ensemble/
-│   ├── *.cbm                25 CatBoost models
-│   ├── *.joblib             fitted preprocessing transformers
-│   ├── feature_list.json    35 model features
-│   ├── categorical_features.json
-│   └── model_metadata.json
-├── frontend/                React + Vite app
-│   └── src/pages/           Prediction, BatchUpload, MapPage, Monitoring
-├── data/processed/          train/test CSVs
-└── requirements.txt
+api/            FastAPI app (main.py, schemas.py)
+src/            prediction library (config, feature_engineering, data_validation,
+                predict, forecast, briefing, weather, logger)
+models/champion_v014_seed_ensemble/   25 .cbm models + fitted .joblib transformers + metadata
+scripts/        fit_transformers.py, log_to_mlflow.py, build_district_defaults.py, test_predict_pipeline.py
+data/           processed train/test CSVs, sri_lanka_cities.json, district_defaults.json
+frontend/       React + Vite app (pages, components, services)
+docs/           round1 summary, MLflow screenshots, phase summaries
+Dockerfile      container image used by Render
 ```
 
 ---
 
-## The model (V014)
-
-- **Type:** CatBoost Regressor seed ensemble (25 models, averaged).
-- **Target:** `flood_risk_score` (0–1).
-- **Features:** 35 Alpha Pack features (10 categorical), including engineered ratio features and
-  `log1p` / quantile-map / Yeo-Johnson transforms.
-- **Validation:** target-binned StratifiedKFold (5 splits) across seeds 42, 202, 777, 2026, 9999.
-- **Risk levels:** Low (<0.30), Moderate (0.30–0.55), High (0.55–0.75), Critical (≥0.75).
-  In practice model outputs fall in roughly 0.36–0.64, i.e. Moderate/High.
-
-### Feature engineering / preprocessing
-
-A raw input record is turned into the 35 model features by `src/feature_engineering.py`:
-
-1. **4 Alpha Pack ratio features** computed from distance / rainfall / inundation.
-2. **5 `log1p` features** computed directly from the raw columns.
-3. **3 fitted transforms** (`ndvi_qmap`, `ndwi_qmap`, `elevation_m_yeojohnson`) applied from
-   transformers saved under `models/champion_v014_seed_ensemble/*.joblib`.
-
-The fitted transformers are produced once with:
-
-```bash
-python scripts/fit_transformers.py
-```
-
-(re-run only if the model is retrained).
-
----
-
-## Setup
+## Setup (local)
 
 ### Backend
-
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# one-time: generate the fitted transformer artifacts
+# one-time: generate fitted transformer artifacts
 python scripts/fit_transformers.py
 
 # run the API
 uvicorn api.main:app --reload --port 8000
 ```
+API docs: http://localhost:8000/docs
 
-API docs (Swagger UI): http://localhost:8000/docs
+Set `GEMINI_API_KEY` in a local `.env` (git-ignored) to enable the AI briefing:
+```
+GEMINI_API_KEY=your_key_here
+```
 
 ### Frontend
-
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev          # http://localhost:5173
 ```
+The frontend reads `VITE_API_URL` (falls back to `http://localhost:8000`). For production builds,
+`frontend/.env.production` points to the Render API.
 
-App: http://localhost:5173
-
----
-
-## API endpoints
-
-| Method | Path             | Description                                            |
-|--------|------------------|--------------------------------------------------------|
-| GET    | `/`              | Service status message                                 |
-| GET    | `/health`        | Health check + model-loaded flag                       |
-| GET    | `/model-info`    | Model name, version, feature count, validation method  |
-| POST   | `/predict`       | Score a single record `{ "record": { ... } }`          |
-| POST   | `/predict/batch` | Score multiple records `{ "records": [ ... ] }`        |
-| GET    | `/history`       | Most recent logged predictions (`?limit=`)             |
-| GET    | `/stats`         | Aggregate stats: totals, avg score, risk breakdown     |
-
-**Example:**
-
+### Smoke test
 ```bash
-curl -X POST http://localhost:8000/predict \
-  -H 'Content-Type: application/json' \
-  -d '{"record": {"district":"Kandy","latitude":7.30,"longitude":80.60,"rainfall_7d_mm":5, ...}}'
-# -> {"record_id":"...","flood_risk_score":0.62,"risk_level":"High","model_version":"champion_v014_seed_ensemble"}
-```
-
----
-
-## Frontend pages
-
-| Page              | URL                              | Status            |
-|-------------------|----------------------------------|-------------------|
-| Prediction (form) | http://localhost:5173/           | Wired to `/predict` |
-| Batch Upload      | http://localhost:5173/batch      | Scaffold          |
-| Map               | http://localhost:5173/map        | Scaffold          |
-| Monitoring        | http://localhost:5173/monitoring | Scaffold          |
-
-The Prediction page collects raw location/environmental data and calls `POST /predict`, then
-displays the flood risk score, risk level, model version, and record ID.
-
----
-
-## Testing
-
-```bash
-# end-to-end batch smoke test on the processed test set
 python scripts/test_predict_pipeline.py
 ```
 
 ---
 
+## Deployment
+
+**API → Render (Docker web service):**
+- Render builds the repo `Dockerfile` (`python:3.11`, installs `api/requirements.txt`, runs
+  `scripts/fit_transformers.py` at build, serves `uvicorn api.main:app`).
+- Set the `GEMINI_API_KEY` environment variable in the Render service settings.
+- Auto-deploys on push to `main`.
+
+**Frontend → Vercel (static build):**
+- Build command `npm run build`, output `dist/` (root: `frontend/`).
+- Set `VITE_API_URL` to the Render API URL (also committed in `frontend/.env.production`).
+- Auto-deploys on push to `main`.
+
+---
+
+## Dependencies
+
+- **Backend (runtime):** `api/requirements.txt` — fastapi, uvicorn, pydantic, catboost, numpy, pandas,
+  scikit-learn, joblib, requests, python-dotenv, google-generativeai.
+- **Full dev environment:** `requirements.txt` (includes Jupyter, matplotlib, MLflow, etc.).
+- **Frontend:** `frontend/package.json` — react, react-dom, react-router-dom, axios, leaflet,
+  react-leaflet, recharts, lucide-react (build: vite, eslint).
+
+---
+
+## External services & libraries (Rule 5 disclosure)
+
+| Service / Library | Purpose | Free/Paid | Where used |
+|---|---|---|---|
+| Render | API hosting (Docker web service) | Free tier | Dockerfile, live API |
+| Vercel | Frontend hosting | Free tier | frontend deploy |
+| Open-Meteo | 10-day rainfall forecast | Free, no key | `src/weather.py` |
+| Google Gemini | NL preparedness briefing | Free tier (quota) | `src/briefing.py` (google-generativeai) |
+| OpenStreetMap tiles | Map base tiles | Free | `RiskMap.jsx`, `QuickForm.jsx` (Leaflet) |
+| Google Fonts (Inter) | Typography | Free | `frontend/index.html` |
+| GitHub | Source hosting + deploy trigger | Free | repository |
+| MLflow | Experiment tracking | Free (OSS) | `scripts/log_to_mlflow.py` |
+| CatBoost | Gradient-boosting model | Free (OSS) | `src/predict.py`, `models/*.cbm` |
+| scikit-learn | Fitted transforms (qmap / Yeo-Johnson) | Free (OSS) | `src/feature_engineering.py` |
+| FastAPI / Uvicorn | API framework / server | Free (OSS) | `api/main.py` |
+| React / Vite | Frontend framework / build | Free (OSS) | `frontend/` |
+| Leaflet / react-leaflet | Map rendering | Free (OSS) | `RiskMap.jsx` |
+| recharts | Charts | Free (OSS) | forecast & monitoring charts |
+| lucide-react | Icons | Free (OSS) | across pages |
+| axios | HTTP client | Free (OSS) | `src/services/api.js` |
+
+No paid APIs, foundation-model fine-tuning, or proprietary services are used.
+
+---
+
 ## Round 1 foundation
 
-The system is based on our Round 1 best model: **CatBoost Alpha Pack + drop-missing train rows**,
-extended into a seed ensemble (V014). See `docs/round1_results_summary.md` for the full
-experiment history and public-score progression.
+The system is based on our Round 1 best model — **CatBoost Alpha Pack + drop-missing training rows**,
+extended into a seed ensemble (V014). See `docs/round1_results_summary.md` for the full experiment
+history and public-score progression.

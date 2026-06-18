@@ -6,7 +6,6 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Prediction from "./pages/Prediction";
 import Forecast from "./pages/Forecast";
-import BatchUpload from "./pages/BatchUpload";
 import MapPage from "./pages/MapPage";
 import Monitoring from "./pages/Monitoring";
 
@@ -23,7 +22,6 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/predict" element={<Prediction />} />
           <Route path="/forecast" element={<Forecast />} />
-          <Route path="/batch" element={<BatchUpload />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/monitoring" element={<Monitoring />} />
         </Routes>
