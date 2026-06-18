@@ -35,9 +35,6 @@ COPY models/ ./models/
 COPY scripts/ ./scripts/
 COPY data/ ./data/
 
-# Create the data directory explicitly for SQLite logging configurations
-RUN mkdir -p data
-
 # Execute the transformer setup script
 RUN cd /workspace && python scripts/fit_transformers.py
 
