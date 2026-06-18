@@ -1,39 +1,46 @@
-# Step 1: Use the full Python 3.11 image containing built-in compilation tools
-FROM python:3.11
+# ==========================================
+# STAGE 1: The Builder (The Heavy Kitchen)
+# ==========================================
+FROM python:3.11 AS builder
 
-# Step 2: Establish the working environment inside the container
 WORKDIR /workspace
 
-# Step 3: Explicitly lock the Python module path to our absolute workspace root
-ENV PYTHONPATH=/workspace
-
-# Step 4: Install underlying OS dependencies required for CatBoost C-bindings 
+# Install system compilation tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Step 5: Copy the dependencies file first to leverage Docker layer caching
+# Copy requirements and install them into a localized folder (/install)
 COPY ./api/requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Step 6: Install Python libraries
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Step 7: Copy all modular components into the container
+# ==========================================
+# STAGE 2: The Runner (The Clean Dining Table)
+# ==========================================
+FROM python:3.11-slim AS runner
+
+WORKDIR /workspace
+
+# Set the Python path so scripts can find module definitions
+ENV PYTHONPATH=/workspace
+
+# Copy ONLY the pre-installed Python packages from the builder stage
+COPY --from=builder /install /usr/local
+
+# Copy your clean application folders
 COPY api/ ./api/
 COPY src/ ./src/
 COPY models/ ./models/
 COPY scripts/ ./scripts/
 COPY data/ ./data/
 
-# Step 8: Create the data directory explicitly so SQLite has a valid path to write predictions.db
+# Create the data directory explicitly for SQLite logging configurations
 RUN mkdir -p data
 
-# Step 9: Run the transformer script by forcing Python to execute it from the absolute /workspace root
-# This explicitly aligns the relative path definitions inside the script with Docker's filesystem
+# Execute the transformer setup script
 RUN cd /workspace && python scripts/fit_transformers.py
 
-# Step 10: Expose Render's standard web service port
 EXPOSE 10000
 
-# Step 11: Spin up the server using uvicorn, routing to main.py inside the api directory
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "10000"]
